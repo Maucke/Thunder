@@ -1,0 +1,11 @@
+thunder\guicolor2index.o: ..\ucGUI\Core\GUIColor2Index.c
+thunder\guicolor2index.o: ..\ucGUI\Core\GUI_Protected.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUI.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUI_ConfDefaults.h
+thunder\guicolor2index.o: ..\ucGUI\Config\GUIConf.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUIType.h
+thunder\guicolor2index.o: ..\ucGUI\Core\LCD.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUIVersion.h
+thunder\guicolor2index.o: ..\ucGUI\Core\LCD_Protected.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUIDebug.h
+thunder\guicolor2index.o: ..\ucGUI\Core\GUI_X.h

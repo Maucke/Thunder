@@ -1,0 +1,11 @@
+thunder\lcdp0.o: ..\ucGUI\ConvertMono\LCDP0.c
+thunder\lcdp0.o: ..\ucGUI\Core\LCD_Private.h
+thunder\lcdp0.o: ..\ucGUI\Core\LCD_ConfDefaults.h
+thunder\lcdp0.o: ..\ucGUI\Config\LCDConf.h
+thunder\lcdp0.o: ..\ucGUI\Core\GUI_ConfDefaults.h
+thunder\lcdp0.o: ..\ucGUI\Config\GUIConf.h
+thunder\lcdp0.o: ..\ucGUI\Core\LCD_Protected.h
+thunder\lcdp0.o: ..\ucGUI\Core\LCD.h
+thunder\lcdp0.o: ..\ucGUI\Core\GUI.h
+thunder\lcdp0.o: ..\ucGUI\Core\GUIType.h
+thunder\lcdp0.o: ..\ucGUI\Core\GUIVersion.h

@@ -1,0 +1,9 @@
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUI_MergeRect.c
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUI.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUI_ConfDefaults.h
+thunder\gui_mergerect.o: ..\ucGUI\Config\GUIConf.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUIType.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\LCD.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUIVersion.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUIDebug.h
+thunder\gui_mergerect.o: ..\ucGUI\Core\GUI_X.h

@@ -1,0 +1,15 @@
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI_GetBitmapPixelIndex.c
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI_Private.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI_Protected.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI_ConfDefaults.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Config\GUIConf.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUIType.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\LCD.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUIVersion.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\LCD_Protected.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUIDebug.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\GUI_X.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\LCD_Private.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Core\LCD_ConfDefaults.h
+thunder\gui_getbitmappixelindex.o: ..\ucGUI\Config\LCDConf.h
