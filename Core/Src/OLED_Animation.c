@@ -1,48 +1,78 @@
-#include "gui.h"
 #include "OLED_Animation.h"
-#include "OLED_Driver.h"
-
 #include "main.h"
 #include "gpio.h"
 #include "sys.h"
 #include "math.h"
 
-float RandMind[3][MINDMAX],MovMind[2][MINDMAX];
-float MindStep_X[MINDMAX],MindStep_Y[MINDMAX];
+
+#ifdef __cplusplus
+extern "C"  {
+#endif
+
 u8 MindNum = 5;
 u8 CircleNum = 1;
-u8 SnowflakeNum = 1;
-u8 MeteoNum = 1;
-u8 PlanetNum = 1;
+u8 SnowflakeNum = 5;
+u8 MeteoNum = 5;
+u8 PlanetNum = 5;
+u8 TriangleNum = 2;
 
+uint32_t tempcolor=0;
 	
+typedef struct
+{
+	float x;
+	float y;	
+	float dirx;
+	float diry;
+	float r;
+	u16 color;
+}MTMOVMIND;
+
+MTMOVMIND mtmovmind[MINDMAX];
+  
+uint32_t RandomColor(void){
+	
+	uint8_t red,green,blue;
+	red = rand()&0xff;
+	__ASM("NOP");
+	green = rand()&0xff;
+	__ASM("NOP");
+	blue = rand()&0xff;
+	return (red<<16|green<<8|blue);
+}
+
+void Draw_Triangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2)  {
+  GUI_AA_DrawLine(x0, y0, x1, y1);
+  GUI_AA_DrawLine(x1, y1, x2, y2);
+  GUI_AA_DrawLine(x2, y2, x0, y0);
+}
 
 OLED_STATUS OLED_MovMind(u8 Index)
 {
-	if(MovMind[0][Index]<=3)
+	if(mtmovmind[Index].x<=3)
 	{	
-		MovMind[0][Index] = 4;
+		mtmovmind[Index].x = 4;
 		return OLED_IDLE;
 	}
-	else if(MovMind[0][Index]>=OLED_WIDTH-2)
+	else if(mtmovmind[Index].x>=OLED_WIDTH-2)
 	{
-		MovMind[0][Index] = OLED_WIDTH-3;
+		mtmovmind[Index].x = OLED_WIDTH-3;
 		return OLED_IDLE;
 	}
-	else if(MovMind[1][Index]<=0)
+	else if(mtmovmind[Index].y<=0)
 	{
-		MovMind[1][Index] = 1;
+		mtmovmind[Index].y = 1;
 		return OLED_IDLE;
 	}
-	else if(MovMind[1][Index]>=OLED_HEIGHT-2)
+	else if(mtmovmind[Index].y>=OLED_HEIGHT-2)
 	{
-		MovMind[1][Index] = OLED_HEIGHT-3;
+		mtmovmind[Index].y = OLED_HEIGHT-3;
 		return OLED_IDLE;
 	}
 	else
 	{
-		MovMind[0][Index] += MindStep_X[Index];
-		MovMind[1][Index] += MindStep_Y[Index];
+		mtmovmind[Index].x += mtmovmind[Index].dirx;
+		mtmovmind[Index].y += mtmovmind[Index].diry;
 	}
   return OLED_BUSY;
 }
@@ -54,188 +84,96 @@ u16 GetMindDistanceSquare(u16 x0,u16 y0,u16 x1,u16 y1)
 
 void Motion_MindInit(void)
 {
-	static float DistanceX,DistanceY;
 	int i;
 	for(i=0;i<MINDMAX;i++)
 	{
-		RandMind[0][i] = rand()%(OLED_WIDTH-4)+4;
+		mtmovmind[i].color = RandomColor();
 		__ASM("NOP");
-		RandMind[1][i] = rand()%OLED_HEIGHT;
+		mtmovmind[i].x = rand()%(OLED_WIDTH-4)+4;
 		__ASM("NOP");
-//		RandMind[2][i] = oled.RandomColor();
-		__ASM("NOP");
-		MovMind[0][i] = rand()%(OLED_WIDTH-4)+4;
-		__ASM("NOP");
-		MovMind[1][i] = rand()%OLED_HEIGHT;
-		DistanceX = RandMind[0][i] - MovMind[0][i];
-		DistanceY = RandMind[1][i] - MovMind[1][i];
-		if(DistanceX<0&&DistanceY>=0)
-		{
-			if(-DistanceX>DistanceY)
-			{
-				MindStep_X[i]=-1;
-				MindStep_Y[i]=-DistanceY/DistanceX;
-			}
-			else
-			{
-				MindStep_X[i]=DistanceX/DistanceY;;
-				MindStep_Y[i]=1;
-			}
-		}
-		else if(DistanceX>=0&&DistanceY<0)
-		{
-			if(DistanceX>-DistanceY)
-			{
-				MindStep_X[i]=1;
-				MindStep_Y[i]=DistanceY/DistanceX;
-			}
-			else
-			{
-				MindStep_X[i]=-DistanceX/DistanceY;;
-				MindStep_Y[i]=-1;
-			}
-		}
-		else if(DistanceX>=0&&DistanceY>=0)
-		{
-			if(DistanceX>DistanceY)
-			{
-				MindStep_X[i]=1;
-				MindStep_Y[i]=DistanceY/DistanceX;
-			}
-			else
-			{
-				MindStep_X[i]=DistanceX/DistanceY;;
-				MindStep_Y[i]=1;
-			}
-		}
-		else if(DistanceX<0&&DistanceY<0)
-		{
-			if(-DistanceX>-DistanceY)
-			{
-				MindStep_X[i]=-1;
-				MindStep_Y[i]=-DistanceY/DistanceX; 
-			}
-			else
-			{
-				MindStep_X[i]=-DistanceX/DistanceY;;
-				MindStep_Y[i]=-1;
-			}
-		}
+		mtmovmind[i].y = rand()%OLED_HEIGHT;
+		
+		mtmovmind[i].dirx = (rand()%30-15)*0.1f;
+		mtmovmind[i].diry = (rand()%30-15)*0.1f;
+		if(mtmovmind[i].dirx<0.2&&mtmovmind[i].dirx>-0.2)
+			mtmovmind[i].dirx = 0.5;
+		if(mtmovmind[i].diry<0.2&&mtmovmind[i].diry>-0.2)
+			mtmovmind[i].diry = 0.5;
 	}
-	MindNum = 5;
+//	MindNum = 5;
 }
 
 
 void Motion_Mind(void)
 {
-	static float DistanceX,DistanceY;
 	int i,j;
 	for(i=0;i<MindNum;i++)
 	{
 		if(OLED_MovMind(i) == OLED_IDLE)
 		{
-			RandMind[0][i] = rand()%(OLED_WIDTH-4)+4;
-			__ASM("NOP");
-			RandMind[1][i] = rand()%OLED_HEIGHT;
-//			RandMind[2][i] = oled.RandomColor();
+			mtmovmind[i].color = RandomColor();
+			mtmovmind[i].dirx = (rand()%30-15)*0.1f;
+			mtmovmind[i].diry = (rand()%30-15)*0.1f;
+			if(mtmovmind[i].dirx<0.2&&mtmovmind[i].dirx>-0.2)
+				mtmovmind[i].dirx = 0.5;
+			if(mtmovmind[i].diry<0.2&&mtmovmind[i].diry>-0.2)
+				mtmovmind[i].diry = 0.5;
 			
-			DistanceX = RandMind[0][i] - MovMind[0][i];
-			DistanceY = RandMind[1][i] - MovMind[1][i];
-			if(DistanceX<0&&DistanceY>=0)
-			{
-				if(-DistanceX>DistanceY)
-				{
-					MindStep_X[i]=-1;
-					MindStep_Y[i]=-DistanceY/DistanceX;
-				}
-				else
-				{
-					MindStep_X[i]=DistanceX/DistanceY;;
-					MindStep_Y[i]=1;
-				}
-			}
-			else if(DistanceX>=0&&DistanceY<0)
-			{
-				if(DistanceX>-DistanceY)
-				{
-					MindStep_X[i]=1;
-					MindStep_Y[i]=DistanceY/DistanceX;
-				}
-				else
-				{
-					MindStep_X[i]=-DistanceX/DistanceY;;
-					MindStep_Y[i]=-1;
-				}
-			}
-			else if(DistanceX>=0&&DistanceY>=0)
-			{
-				if(DistanceX>DistanceY)
-				{
-					MindStep_X[i]=1;
-					MindStep_Y[i]=DistanceY/DistanceX;
-				}
-				else
-				{
-					MindStep_X[i]=DistanceX/DistanceY;;
-					MindStep_Y[i]=1;
-				}
-			}
-			else if(DistanceX<0&&DistanceY<0)
-			{
-				if(-DistanceX>-DistanceY)
-				{
-					MindStep_X[i]=-1;
-					MindStep_Y[i]=-DistanceY/DistanceX;
-				}
-				else
-				{
-					MindStep_X[i]=-DistanceX/DistanceY;;
-					MindStep_Y[i]=-1;
-				}
-			}
 			if(MindNum<MINDMAX )
 			{
 				MindNum++;
 			}
 		}
 	}
-	
+	GUI_SetColor(GUI_GRAY);
 	for(i=0;i<MindNum;i++)
 	{
 		for(j=0;j<MindNum;j++)
 		{
-//			Temp = GetMindDistanceSquare(MovMind[0][i],MovMind[1][i],MovMind[0][j],MovMind[1][j]);
-			if((MovMind[0][i]-MovMind[0][j])*(MovMind[0][i]-MovMind[0][j])+(MovMind[1][i]-MovMind[1][j])*(MovMind[1][i]-MovMind[1][j])<900)
+			if((mtmovmind[i].x-mtmovmind[j].x)*(mtmovmind[i].x-mtmovmind[j].x)+(mtmovmind[i].y-mtmovmind[j].y)*(mtmovmind[i].y-mtmovmind[j].y)<900)
 			{
-				GUI_AA_DrawLine(MovMind[0][j],MovMind[1][j],MovMind[0][i],MovMind[1][i]);
+				GUI_AA_DrawLine(mtmovmind[j].x,mtmovmind[j].y,mtmovmind[i].x,mtmovmind[i].y);
 			}
 		}
 	}
 	
 	for(i=0;i<MindNum;i++)
-		GUI_AA_FillCircle(MovMind[0][i],MovMind[1][i],2);
+	{
+		GUI_SetColor(mtmovmind[i].color);
+		GL_DrawCircle(mtmovmind[i].x,mtmovmind[i].y,2);
+	}
 }
 
-u16 FucCircle[4][CIRCLEMAX];
-
-OLED_STATUS OLED_FucCircle(u8 Index,int Size)
+typedef struct
 {
-	static float Motion[CIRCLEMAX]={0};
-	if(Motion[Index]<FucCircle[0][Index]%6+16)
+	int x;
+	int y;	
+	float r;
+	u16 color;
+	float crt;
+}MTCIRCLE;
+
+MTCIRCLE mtcircle[CIRCLEMAX];
+
+OLED_STATUS OLED_FucCircle(u8 Index)
+{
+	if(mtcircle[Index].crt<(mtcircle[Index].x%6+16))
 	{
-		if(Size-Motion[Index]<0)
+		if(mtcircle[Index].r-mtcircle[Index].crt<0)
 		{
-			Motion[Index] = 0;
+			mtcircle[Index].crt = 0;
 			return OLED_IDLE;
 		}
-		GUI_AA_FillCircle(FucCircle[0][Index],FucCircle[1][Index],Size-Motion[Index]);
-		GUI_DrawCircle(FucCircle[0][Index],FucCircle[1][Index],Size+Motion[Index]);
-		Motion[Index]+=0.4f;
+		GUI_SetColor(mtcircle[Index].color);
+		GL_DrawCircle(mtcircle[Index].x,mtcircle[Index].y,mtcircle[Index].r-mtcircle[Index].crt);
+		GUI_SetColor(GUI_GRAY);
+		GL_DrawCircle(mtcircle[Index].x,mtcircle[Index].y,mtcircle[Index].r+mtcircle[Index].crt);
+		mtcircle[Index].crt+=0.4;
 		return OLED_BUSY;
 	}
 	else
 	{
-		Motion[Index] = 0;
+		mtcircle[Index].crt = 0;
 		return OLED_IDLE;
 	}
 }
@@ -244,15 +182,20 @@ void Motion_CircleInit(void)
 	int i;
 	for(i=0;i<CIRCLEMAX;i++)
 	{
-		FucCircle[0][i] = rand()%(OLED_WIDTH-12)+6;
+			mtcircle[i].x = rand()%(OLED_WIDTH-12)+6;
+			__ASM("NOP");
+			mtcircle[i].y = rand()%OLED_HEIGHT;
+			__ASM("NOP");
+			mtcircle[i].r = rand()%10+2;
 		__ASM("NOP");
-		FucCircle[1][i] = rand()%OLED_HEIGHT;
-		__ASM("NOP");
-			FucCircle[2][i] = rand()%10+2;
-		__ASM("NOP");
-//			FucCircle[3][i] = oled.RandomColor();
+			mtcircle[i].color = RandomColor();
+
+			if(CircleNum<CIRCLEMAX )
+			{
+				CircleNum++;
+			}
 	}
-	CircleNum=1;
+//	CircleNum=1;
 }
 
 void Motion_Circle(void)
@@ -260,15 +203,15 @@ void Motion_Circle(void)
 	int i;
 	for(i=0;i<CircleNum;i++)
 	{
-		if(OLED_FucCircle(i,FucCircle[2][i]) == OLED_IDLE)
+		if(OLED_FucCircle(i) == OLED_IDLE)
 		{
-			FucCircle[0][i] = rand()%(OLED_WIDTH-12)+6;
+			mtcircle[i].x = rand()%(OLED_WIDTH-12)+6;
 			__ASM("NOP");
-			FucCircle[1][i] = rand()%OLED_HEIGHT;
+			mtcircle[i].y = rand()%OLED_HEIGHT;
 			__ASM("NOP");
-			FucCircle[2][i] = rand()%10+2;
+			mtcircle[i].r = rand()%10+2;
 		__ASM("NOP");
-//			FucCircle[3][i] = oled.RandomColor();
+			mtcircle[i].color = RandomColor();
 
 			if(CircleNum<CIRCLEMAX )
 			{
@@ -277,92 +220,23 @@ void Motion_Circle(void)
 		}
 	}
 }
+typedef struct
+{
+	float x;
+	float y;	
+	float dirx;
+	u16 color;
+	u16 type;
+}MTSNOWFLAKE;
 
-u16 MovSnowflake[5][STARMAX];
+MTSNOWFLAKE mtsnowflake[STARMAX];
 
 OLED_STATUS OLED_MovSnowflake(u8 Index)
 {
-	 int32   dx;						// 直线x轴差值变量
-    int32   dy;          			// 直线y轴差值变量
-    int8    dx_sym;					// x轴增长方向，为-1时减值方向，为1时增值方向
-    int8    dy_sym;					// y轴增长方向，为-1时减值方向，为1时增值方向
-    int32   dx_x2;					// dx*2值变量，用于加快运算速度
-    int32   dy_x2;					// dy*2值变量，用于加快运算速度
-   static int32   di[STARMAX];						// 决策变量
-//   if(Mo150vSnowflake[1][Index]==0)
-	dx = MovSnowflake[3][Index] - MovSnowflake[0][Index] ;			// 求取两点之间的差值
-	 
-   dy = (OLED_HEIGHT-1) - MovSnowflake[1][Index];
-	
-		if(MovSnowflake[1][Index]>=OLED_HEIGHT||MovSnowflake[0][Index]>=OLED_WIDTH)
-			return OLED_IDLE;
-	
-   /* 判断增长方向，或是否为水平线、垂直线、点 */
-   if(dx>0)							// 判断x轴方向
-   {  dx_sym = 1;					// dx>0，设置dx_sym=1
-   }
-   else
-   {  if(dx<0)
-      {  dx_sym = -1;				// dx<0，设置dx_sym=-1
-      }
-      else
-      {  // dx==0，画垂直线，或一点
-				
-					 MovSnowflake[1][Index]+=1;
-      	 return OLED_BUSY;
-      }
-   }
-   
-   if(dy>0)							// 判断y轴方向
-   {  dy_sym = 1;					// dy>0，设置dy_sym=1
-   }
-   else
-   {  if(dy<0)
-      {  dy_sym = -1;				// dy<0，设置dy_sym=-1
-      }
-      else
-      {  // dy==0，画水平线，或一点
-				
-					 MovSnowflake[0][Index]+=1;
-      	 return OLED_BUSY;
-      }
-   }
-    
-   /* 将dx、dy取绝对值 */
-   dx = dx_sym * dx;
-   dy = dy_sym * dy;
- 
-   /* 计算2倍的dx及dy值 */
-   dx_x2 = dx*2;
-   dy_x2 = dy*2;
-   
-   /* 使用Bresenham法进行画直线 */
-   if(dx>=dy)						// 对于dx>=dy，则使用x轴为基准
-   {
-			di[Index] = dy_x2 - dx;
-
-         MovSnowflake[0][Index] += dx_sym;
-         if(di[Index]<0)
-         {  di[Index] += dy_x2;			// 计算出下一步的决策值
-         }
-         else
-         {  di[Index] += dy_x2 - dx_x2;
-            MovSnowflake[1][Index] += dy_sym;
-         }
-   }
-   else								// 对于dx<dy，则使用y轴为基准
-   {  
-		 di[Index] = dx_x2 - dy;
-
-         MovSnowflake[1][Index] += dy_sym;
-         if(di[Index]<0)
-         {  di[Index] += dx_x2;
-         }
-         else
-         {  di[Index] += dx_x2 - dy_x2;
-            MovSnowflake[0][Index] += dx_sym;
-         }
-   } 
+	mtsnowflake[Index].x+= mtsnowflake[Index].dirx;			// 求取两点之间的差值
+	mtsnowflake[Index].y++;
+	if(mtsnowflake[Index].y>OLED_HEIGHT||mtsnowflake[Index].x>OLED_WIDTH||mtsnowflake[Index].y<0||mtsnowflake[Index].x<0)
+		return OLED_IDLE;
   return OLED_BUSY;
 }
 
@@ -371,60 +245,75 @@ void Motion_SnowflakeInit(void)
 	int i;
 	for(i=0;i<STARMAX;i++)
 	{
-			MovSnowflake[0][i] = rand()%(OLED_WIDTH-12)+6;
-			MovSnowflake[1][i] = 1;
-			MovSnowflake[3][i] = MovSnowflake[0][i]+32;
-			__ASM("NOP");
-			MovSnowflake[2][i] = rand()%5;
-//			MovSnowflake[4][i] = oled.RandomColor();
+		mtsnowflake[i].x = rand()%(OLED_WIDTH-12)+6;
+		mtsnowflake[i].y = 1;
+		mtsnowflake[i].dirx = mtsnowflake[i].x+32;
+		__ASM("NOP");
+		mtsnowflake[i].type = rand()%5;
+		mtsnowflake[i].color = RandomColor();
+		if(SnowflakeNum<STARMAX )
+		{
+			SnowflakeNum++;
+		}
 	}
-	SnowflakeNum = 5;
+//	SnowflakeNum = 5;
 }
 
 void Motion_Snowflake(void)
 {
 	int i,j;
-//	GUI_AA_DrawLine(MovSnowflake[0][0],MovSnowflake[1][i],MovSnowflake[3][i],95,15);
+//	GUI_AA_DrawLine(MovSnowflake[0][0],mtsnowflake[i].y,mtsnowflake[i].dirx,95,15);
 	for(i=0;i<SnowflakeNum;i++)
 	{
-		for(j=0;j<MovSnowflake[4][i]%5+1;j++)
+		for(j=0;j<mtsnowflake[i].color%5+1;j++)
 		{
 			if(OLED_MovSnowflake(i) == OLED_IDLE)
 			{
-				MovSnowflake[0][i] = rand()%(OLED_WIDTH-12)+6;
-				MovSnowflake[1][i] = 1;
-				MovSnowflake[3][i] = MovSnowflake[0][i]+32;
+				mtsnowflake[i].x = rand()%(OLED_WIDTH-12)+6;
+				mtsnowflake[i].y = 1;
+				mtsnowflake[i].dirx = 32.0f/OLED_HEIGHT;
 				__ASM("NOP");
-				MovSnowflake[2][i] = rand()%5;
-//				MovSnowflake[4][i] = oled.RandomColor();
+				mtsnowflake[i].type = rand()%5;
+				mtsnowflake[i].color = RandomColor();
 				if(SnowflakeNum<STARMAX )
 				{
 					SnowflakeNum++;
 				}
 			}
 		}
-		switch(MovSnowflake[2][i])
+		switch(mtsnowflake[i].type)
 		{
-			case 0:GUI_AA_FillCircle(MovSnowflake[0][i],MovSnowflake[1][i],1);break;
-			case 1:GUI_AA_FillCircle(MovSnowflake[0][i],MovSnowflake[1][i],1);
-							Draw_Point(MovSnowflake[0][i],MovSnowflake[1][i],0);break;
-			case 2:Draw_Point(MovSnowflake[0][i],MovSnowflake[1][i],MovSnowflake[4][i]);break;
-			case 3:Draw_Point(MovSnowflake[0][i],MovSnowflake[1][i],MovSnowflake[4][i]);Draw_Point(MovSnowflake[0][i]+1,MovSnowflake[1][i]+1,MovSnowflake[4][i]);break;
-			case 4:Draw_Point(MovSnowflake[0][i],MovSnowflake[1][i],MovSnowflake[4][i]);Draw_Point(MovSnowflake[0][i],MovSnowflake[1][i]+1,MovSnowflake[4][i]);Draw_Point(MovSnowflake[0][i]+1,MovSnowflake[1][i],MovSnowflake[4][i]);break;
+			case 0:
+			GUI_SetColor(mtsnowflake[i].color);GL_DrawCircle(mtsnowflake[i].x,mtsnowflake[i].y,1);break;
+			case 1:
+			GUI_SetColor(mtsnowflake[i].color);GL_DrawCircle(mtsnowflake[i].x,mtsnowflake[i].y,1);Draw_Point(mtsnowflake[i].x,mtsnowflake[i].y,0);break;
+			case 2:Draw_Point(mtsnowflake[i].x,mtsnowflake[i].y,mtsnowflake[i].color);break;
+			case 3:Draw_Point(mtsnowflake[i].x,mtsnowflake[i].y,mtsnowflake[i].color);Draw_Point(mtsnowflake[i].x+1,mtsnowflake[i].y+1,mtsnowflake[i].color);break;
+			case 4:Draw_Point(mtsnowflake[i].x,mtsnowflake[i].y,mtsnowflake[i].color);Draw_Point(mtsnowflake[i].x,mtsnowflake[i].y+1,mtsnowflake[i].color);Draw_Point(mtsnowflake[i].x+1,mtsnowflake[i].y,mtsnowflake[i].color);break;
 		}
 	}
 }
 
-float MovmeteorStep = 60;
-u16 Movmeteor[6][METEORMAX];
-float MovmeteorStep_X;
-float Movmeteor_X[METEORMAX];
+typedef struct
+{
+	int start;
+	u16 color;
+	float spd;
+	float x;
+	float y;	
+	int len;
+	int type;
+}MTMOVMETEOR;
+
+MTMOVMETEOR mtmovmeteor[METEORMAX];
+#define MOVMETEORDEF 60.0f
+float movmeteorstep = MOVMETEORDEF / OLED_HEIGHT;
 
 OLED_STATUS OLED_Movmeteor(u8 Index)
 {
-	Movmeteor[1][Index] ++;
-	Movmeteor_X[Index] += MovmeteorStep_X;
-	if(Movmeteor[1][Index]>OLED_HEIGHT)
+	mtmovmeteor[Index].y ++;
+	mtmovmeteor[Index].x += movmeteorstep;
+	if(mtmovmeteor[Index].y>OLED_HEIGHT)
 		return OLED_IDLE;
 	else
 		return OLED_BUSY;
@@ -435,16 +324,23 @@ void Motion_MovmeteorInit(void)
 	int i;
 	for(i=0;i<METEORMAX;i++)
 	{
-			Movmeteor[0][i] = rand()%OLED_WIDTH;
-			Movmeteor_X[i] = Movmeteor[0][i];
-			Movmeteor[1][i] = 0;
-			Movmeteor[2][i] = rand()%5+1;//Speed
-			Movmeteor[3][i] = rand()%5;//Type
-			Movmeteor[4][i] = rand()%15;;//LineColor
-//			Movmeteor[5][i] = oled.RandomColor();
+		mtmovmeteor[i].start = rand()%OLED_WIDTH;
+		mtmovmeteor[i].x = mtmovmeteor[i].start;
+		mtmovmeteor[i].y = 0;
+		mtmovmeteor[i].spd = rand()%5+1;//Speed
+		__ASM("NOP");
+		mtmovmeteor[i].type = rand()%4;//Type
+		__ASM("NOP");
+		mtmovmeteor[i].len = rand()%15;;//LineColor
+		__ASM("NOP");
+		mtmovmeteor[i].color = RandomColor();
+		__ASM("NOP");
+		if(MeteoNum<METEORMAX )
+		{
+			MeteoNum++;
+		}
 	}
-	MeteoNum = 5;
-	MovmeteorStep_X = MovmeteorStep / OLED_HEIGHT;
+//	MeteoNum = 5;
 }
 
 void Motion_Movmeteor(void)
@@ -452,49 +348,67 @@ void Motion_Movmeteor(void)
 	int i,j;
 	for(i=0;i<MeteoNum;i++)
 	{
-		for(j=0;j<Movmeteor[2][i];j++)
+		for(j=0;j<mtmovmeteor[i].spd;j++)
 		{
 			if(OLED_Movmeteor(i) == OLED_IDLE)
 			{
-				Movmeteor[0][i] = rand()%OLED_WIDTH;
-				Movmeteor_X[i] = Movmeteor[0][i];
-				Movmeteor[1][i] = 0;
-				Movmeteor[2][i] = rand()%5+1;//Speed
-				Movmeteor[3][i] = rand()%4;//Type
-				Movmeteor[4][i] = rand()%15;;//LineColor
-//				Movmeteor[5][i] = oled.RandomColor();
+				mtmovmeteor[i].start = rand()%OLED_WIDTH;
+				mtmovmeteor[i].x = mtmovmeteor[i].start;
+				mtmovmeteor[i].y = 0;
+				mtmovmeteor[i].spd = rand()%5+1;//Speed
+				__ASM("NOP");
+				mtmovmeteor[i].type = rand()%4;//Type
+				__ASM("NOP");
+				mtmovmeteor[i].len = rand()%15;;//LineColor
+				__ASM("NOP");
+				mtmovmeteor[i].color = RandomColor();
+				__ASM("NOP");
 				if(MeteoNum<METEORMAX )
 				{
 					MeteoNum++;
 				}
 			}
 		}
-		if(Movmeteor[4][i]>1)
+		if(mtmovmeteor[i].len>1)
 		{
-			Movmeteor[4][i]--;
-			GUI_AA_DrawLine(Movmeteor[0][i],0,Movmeteor_X[i],Movmeteor[1][i]);
+			mtmovmeteor[i].len--;GUI_SetColor(GUI_DARKGRAY);
+			GUI_AA_DrawLine(mtmovmeteor[i].start,0,mtmovmeteor[i].x,mtmovmeteor[i].y);
 		}
-		else if((Movmeteor[1][i]-(Movmeteor[2][i]*3))>0)
-			GUI_AA_DrawLine((Movmeteor[1][i]-(Movmeteor[2][i]*3))*MovmeteorStep_X+Movmeteor[0][i],Movmeteor[1][i]-(Movmeteor[2][i]*3),Movmeteor_X[i],Movmeteor[1][i]);
-		switch(Movmeteor[3][i])
+		else if((mtmovmeteor[i].y-(mtmovmeteor[i].spd*3))>0)
 		{
-			case 0:Draw_Point(Movmeteor_X[i],Movmeteor[1][i],Movmeteor[5][i]);break;
-			case 1:Draw_Point(Movmeteor_X[i]+1,Movmeteor[1][i],Movmeteor[5][i]);Draw_Point(Movmeteor_X[i],Movmeteor[1][i]+1,Movmeteor[5][i]);break;
-			case 2:GUI_AA_FillCircle(Movmeteor_X[i],Movmeteor[1][i],1);break;
-			case 3:GUI_DrawCircle(Movmeteor_X[i],Movmeteor[1][i],1);Draw_Point(Movmeteor_X[i],Movmeteor[1][i],0);break;
+			mtmovmeteor[i].len--;GUI_SetColor(GUI_GRAY);
+			GUI_AA_DrawLine((mtmovmeteor[i].y-(mtmovmeteor[i].spd*3))*movmeteorstep+mtmovmeteor[i].start,mtmovmeteor[i].y-(mtmovmeteor[i].spd*3),mtmovmeteor[i].x,mtmovmeteor[i].y);
+		}
+		switch(mtmovmeteor[i].type)
+		{
+			case 0:Draw_Point(mtmovmeteor[i].x,mtmovmeteor[i].y,mtmovmeteor[i].color);break;
+			case 1:Draw_Point(mtmovmeteor[i].x+1,mtmovmeteor[i].y,mtmovmeteor[i].color);Draw_Point(mtmovmeteor[i].x,mtmovmeteor[i].y+1,mtmovmeteor[i].color);break;
+			case 2:GUI_SetColor(mtmovmeteor[i].color);GL_DrawCircle(mtmovmeteor[i].x,mtmovmeteor[i].y,1);break;
+			case 3:GUI_SetColor(mtmovmeteor[i].color);GL_DrawCircle(mtmovmeteor[i].x,mtmovmeteor[i].y,1);Draw_Point(mtmovmeteor[i].x,mtmovmeteor[i].y,0);break;
 		}
 	}
 }
 
-double MovPlanet[7][PLANETMAX];
+typedef struct
+{
+	int r;//行星大小
+	u16 color;//行星颜色		
+	float spd;//行星转速
+	float orb;//行星运行轨道
+	float angle;//行星运行角度
+	float x;//行星X
+	float y;	//行星Y
+}MTPLANET;
+
+MTPLANET mtplanet[PLANETMAX];
 
 OLED_STATUS OLED_Planet(u8 Index){
-	MovPlanet[4][Index]+= MovPlanet[2][Index];
-	if(MovPlanet[4][Index]>=360)
+	mtplanet[Index].angle+= mtplanet[Index].spd;
+	if(mtplanet[Index].angle>=360)
 	{
-		MovPlanet[4][Index] = 0;
-		MovPlanet[3][Index]++;
-		if(MovPlanet[3][Index]>=64)
+		mtplanet[Index].angle = 0;
+		mtplanet[Index].orb++;
+		if(mtplanet[Index].orb>=64)
 			return OLED_IDLE;
 	}
 	return OLED_BUSY;
@@ -505,50 +419,57 @@ void Motion_PlanetInit(void){
 	int i;
 	for(i=0;i<PLANETMAX;i++)
 	{
-			MovPlanet[0][i] = rand()%4+1;	//行星大小
+			mtplanet[i].r = rand()%4+1;	
 				__ASM("NOP");
-			//MovPlanet[1][i] = RandomColor();		//行星颜色			
-				__ASM("NOP");					
-			MovPlanet[2][i] = (rand()%20+10)/5;	//行星转速
+			mtplanet[i].color = RandomColor();		
+				__ASM("NOP");										
+			mtplanet[i].spd = (rand()%20+10)*0.2;	
 				__ASM("NOP");
-			MovPlanet[3][i] = rand()%60+4;	//行星运行轨道
+			mtplanet[i].orb = rand()%60+4;	
 				__ASM("NOP");
-			MovPlanet[4][i] = 0;	//行星运行角度
+			mtplanet[i].angle = 0;	
+			
+			mtplanet[i].x = 0;	
+			mtplanet[i].y = 0;
+			
+			if(PlanetNum<PLANETMAX )
+			{
+				PlanetNum++;
+			}
 	}
-	PlanetNum = 5;
+//	PlanetNum = 5;
 }
 
 
 void Motion_Planet(void){
 	
 	int i,j;
-//	GUI_AA_DrawLine(MovSnowflake[0][0],MovSnowflake[1][i],MovSnowflake[3][i],95,15);
 	for(i=0;i<PlanetNum;i++)
 	{
 		if(OLED_Planet(i) == OLED_IDLE)
 		{
-			MovPlanet[0][i] = rand()%4+1;	//行星大小
+			mtplanet[i].r = rand()%4+1;	//行星大小
 				__ASM("NOP");
-			//MovPlanet[1][i] = RandomColor();		//行星颜色		
+			mtplanet[i].color = RandomColor();		//行星颜色		
 				__ASM("NOP");										
-			MovPlanet[2][i] = (rand()%20+10)/5;	//行星转速
+			mtplanet[i].spd = (rand()%20+10)*0.2;	//行星转速
 				__ASM("NOP");
-			MovPlanet[3][i] = rand()%60+4;	//行星运行轨道
+			mtplanet[i].orb = rand()%60+4;	//行星运行轨道
 				__ASM("NOP");
-			MovPlanet[4][i] = 0;	//行星运行角度
+			mtplanet[i].angle = 0;	//行星运行角度
 			
-			MovPlanet[5][i] = 0;	//行星X
-			MovPlanet[6][i] = 0;	//行星Y
+			mtplanet[i].x = 0;	//行星X
+			mtplanet[i].y = 0;	//行星Y
 			
 			if(PlanetNum<PLANETMAX )
 			{
 				PlanetNum++;
 			}
 		}
-		MovPlanet[5][i] = OCX+(MovPlanet[3][i]*cos(MovPlanet[4][i]*PI/180));
-		MovPlanet[6][i] = OCY+(MovPlanet[3][i]*sin(MovPlanet[4][i]*PI/180));
+		mtplanet[i].x = OCX+(mtplanet[i].orb*cos(mtplanet[i].angle*PI*0.0056f));
+		mtplanet[i].y = OCY+(mtplanet[i].orb*sin(mtplanet[i].angle*PI*0.0056f));
 		
-		GUI_DrawCircle(OCX,OCY,MovPlanet[3][i]);
+//		GL_DrawCircle(OCX,OCY,mtplanet[i].orb,3);
 		
 	}
 	
@@ -557,30 +478,143 @@ void Motion_Planet(void){
 	{
 		for(j=0;j<PlanetNum;j++)
 		{
-//			Temp = GetMindDistanceSquare(MovMind[0][i],MovMind[1][i],MovMind[0][j],MovMind[1][j]);
-			if((MovPlanet[5][i]-MovPlanet[5][j])*(MovPlanet[5][i]-MovPlanet[5][j])+(MovPlanet[6][i]-MovPlanet[6][j])*(MovPlanet[6][i]-MovPlanet[6][j])<1600)
+//			Temp = GetMindDistanceSquare(mtmovmind[i].x,mtmovmind[i].y,mtmovmind[j].x,mtmovmind[j].y);
+			if((mtplanet[i].x-mtplanet[j].x)*(mtplanet[i].x-mtplanet[j].x)+(mtplanet[i].y-mtplanet[j].y)*(mtplanet[i].y-mtplanet[j].y)<1600)
 			{
-				if(MovPlanet[0][i]==1||MovPlanet[0][j]==1)
+				if(mtplanet[i].r==1||mtplanet[j].r==1)
 					;
 				else
-					GUI_AA_DrawLine(MovPlanet[5][j],MovPlanet[6][j],MovPlanet[5][i],MovPlanet[6][i]);
+				{
+					GUI_SetColor(GUI_GRAY);
+					GUI_AA_DrawLine(mtplanet[j].x,mtplanet[j].y,mtplanet[i].x,mtplanet[i].y);
+				}
 			}
 		}
 	}
 	
 //	for(i=0;i<PlanetNum-1;i++)
 //	{
-//		GUI_AA_DrawLine(OCX+(MovPlanet[3][i]*cos(MovPlanet[4][i]*PI/180)),OCY+(MovPlanet[3][i]*sin(MovPlanet[4][i]*PI/180)),OCX+(MovPlanet[3][i+1]*cos(MovPlanet[4][i+1]*PI/180)),OCY+(MovPlanet[3][i+1]*sin(MovPlanet[4][i+1]*PI/180)));
+//		GUI_AA_DrawLine(OCX+(mtplanet[i].orb*cos(mtplanet[i].angle*PI/180)),OCY+(mtplanet[i].orb*sin(mtplanet[i].angle*PI/180)),OCX+(MovPlanet[3][i+1]*cos(MovPlanet[4][i+1]*PI/180)),OCY+(MovPlanet[3][i+1]*sin(MovPlanet[4][i+1]*PI/180)),color_half);
 //	}
-//	GUI_AA_DrawLine(OCX+(MovPlanet[3][0]*cos(MovPlanet[4][0]*PI/180)),OCY+(MovPlanet[3][0]*sin(MovPlanet[4][0]*PI/180)),OCX+(MovPlanet[3][PlanetNum-1]*cos(MovPlanet[4][PlanetNum-1]*PI/180)),OCY+(MovPlanet[3][PlanetNum-1]*sin(MovPlanet[4][PlanetNum-1]*PI/180)));
+//	GUI_AA_DrawLine(OCX+(MovPlanet[3][0]*cos(MovPlanet[4][0]*PI/180)),OCY+(MovPlanet[3][0]*sin(MovPlanet[4][0]*PI/180)),OCX+(MovPlanet[3][PlanetNum-1]*cos(MovPlanet[4][PlanetNum-1]*PI/180)),OCY+(MovPlanet[3][PlanetNum-1]*sin(MovPlanet[4][PlanetNum-1]*PI/180)),color_half);
 	
 	for(i=0;i<PlanetNum;i++)
 	{
-		GUI_AA_FillCircle(MovPlanet[5][i],MovPlanet[6][i],MovPlanet[0][i]);
+		GUI_SetColor(mtplanet[i].color);
+		GL_DrawCircle(mtplanet[i].x,mtplanet[i].y,mtplanet[i].r);
 	}
 	
 }
 
+typedef struct
+{
+	int r;//外切圆半径
+	u16 color;//三角形颜色		
+	float spd;//三角形转速
+	float angle;//三角形角度
+	float x;  //行星X
+	float y;	//行星Y
+	float dirx;
+	float diry;
+	float delt1;
+	float delt2;
+}MTTRIANGLE;
+
+MTTRIANGLE mttriangle[TRIANGLEMAX];
+
+OLED_STATUS OLED_Triangle(u8 Index){
+	mttriangle[Index].angle+= mttriangle[Index].spd;
+	
+	mttriangle[Index].x+=mttriangle[Index].dirx;
+	mttriangle[Index].y+=mttriangle[Index].diry;
+	
+	if(mttriangle[Index].x-mttriangle[Index].r>OLED_WIDTH||mttriangle[Index].y-mttriangle[Index].r>OLED_HEIGHT||mttriangle[Index].x+mttriangle[Index].r<0||mttriangle[Index].y+mttriangle[Index].r<0)
+	{
+		return OLED_IDLE;
+	}
+	return OLED_BUSY;
+}
+
+void Motion_TriangleInit(void){
+	
+	int i;
+	for(i=0;i<TRIANGLEMAX;i++)
+	{
+		mttriangle[i].r=rand()%10+5;
+			__ASM("NOP");
+		mttriangle[i].color = RandomColor();		
+			__ASM("NOP");										
+		mttriangle[i].spd = (rand()%20+10)*0.067f;
+			__ASM("NOP");
+		mttriangle[i].angle = rand()%60;	//运行角度30 150 270
+		
+		mttriangle[i].x = rand()%OLED_WIDTH;	
+		mttriangle[i].y = rand()%OLED_HEIGHT;	
+		
+		mttriangle[i].dirx = rand()%20*0.1f-1.0f;
+		if(mttriangle[i].dirx<0.2&&mttriangle[i].dirx>-0.2)
+			mttriangle[i].dirx = 0.5;
+		mttriangle[i].diry = rand()%20*0.1f-1.0f;
+		if(mttriangle[i].diry<0.2&&mttriangle[i].diry>-0.2)
+			mttriangle[i].diry = 0.5;
+		mttriangle[i].delt1 = rand()%60+90;
+		mttriangle[i].delt2 = rand()%60+210;
+		
+		if(TriangleNum<TRIANGLEMAX )
+		{
+			TriangleNum++;
+		}
+	}
+//	TriangleNum = 2;
+}
+
+
+void Motion_Triangle(void){
+	
+	int i;
+	for(i=0;i<TriangleNum;i++)
+	{
+		if(OLED_Triangle(i) == OLED_IDLE)
+		{
+			mttriangle[i].r=rand()%10+5;
+				__ASM("NOP");
+			mttriangle[i].color = RandomColor();		
+				__ASM("NOP");										
+			mttriangle[i].spd = (rand()%20+10)*0.06f;
+				__ASM("NOP");
+			mttriangle[i].angle = rand()%60;	//运行角度30 150 270
+			
+			mttriangle[i].x = rand()%OLED_WIDTH;	
+			mttriangle[i].y = rand()%OLED_HEIGHT;	
+			
+			mttriangle[i].dirx = rand()%20*0.1f-1.0f;
+			if(mttriangle[i].dirx<0.2&&mttriangle[i].dirx>-0.2)
+				mttriangle[i].dirx = 0.5;
+			mttriangle[i].diry = rand()%20*0.1f-1.0f;
+			if(mttriangle[i].diry<0.2&&mttriangle[i].diry>-0.2)
+				mttriangle[i].diry = 0.5;
+			mttriangle[i].delt1 = rand()%60+90;
+			mttriangle[i].delt2 = rand()%60+210;
+			
+			if(TriangleNum<TRIANGLEMAX )
+			{
+				TriangleNum++;
+			}
+		}
+	}
+	
+	
+	for(i=0;i<TriangleNum;i++)
+	{	
+		GUI_SetColor(mttriangle[i].color);
+		Draw_Triangle(mttriangle[i].x+(mttriangle[i].r*cos(mttriangle[i].angle*PI/180)),mttriangle[i].y+(mttriangle[i].r*sin(mttriangle[i].angle*PI/180)),mttriangle[i].x+(mttriangle[i].r*cos((mttriangle[i].angle+mttriangle[i].delt1)*PI/180)),mttriangle[i].y+(mttriangle[i].r*sin((mttriangle[i].angle+mttriangle[i].delt1)*PI/180)),mttriangle[i].x+(mttriangle[i].r*cos((mttriangle[i].angle+mttriangle[i].delt2)*PI/180)),mttriangle[i].y+(mttriangle[i].r*sin((mttriangle[i].angle+mttriangle[i].delt2)*PI/180)));
+		if(mttriangle[i].r>5)
+		{
+			GUI_SetColor(mttriangle[i].color);
+			Draw_Triangle(mttriangle[i].x+((mttriangle[i].r-5)*cos(mttriangle[i].angle*PI/180)),mttriangle[i].y+((mttriangle[i].r-5)*sin(mttriangle[i].angle*PI/180)),mttriangle[i].x+((mttriangle[i].r-5)*cos((mttriangle[i].angle+mttriangle[i].delt1)*PI/180)),mttriangle[i].y+((mttriangle[i].r-5)*sin((mttriangle[i].angle+mttriangle[i].delt1)*PI/180)),mttriangle[i].x+((mttriangle[i].r-5)*cos((mttriangle[i].angle+mttriangle[i].delt2)*PI/180)),mttriangle[i].y+((mttriangle[i].r-5)*sin((mttriangle[i].angle+mttriangle[i].delt2)*PI/180)));
+		}
+	}
+}
 
 void OLED_AllMotion_Init(void)
 {
@@ -589,65 +623,111 @@ void OLED_AllMotion_Init(void)
 	Motion_SnowflakeInit();
 	Motion_MovmeteorInit();
 	Motion_PlanetInit();
+	Motion_TriangleInit();
 }
 
 void OLED_CustormMotion(u8 Channel)
 {
+	Channel=3;
 	switch(Channel)
 	{
 	case 0:Motion_Mind();break;
 	case 1:Motion_Movmeteor();break;
 	case 2:Motion_Snowflake();break;
-	case 3:Motion_Planet();break;
+	case 3:Motion_Circle();break;
+	case 4:Motion_Planet();break;
+	case 5:Motion_Triangle();break;
 	}
 }
 
 void OLED_AllMotion(u8 Type,u16 Speed)
 {
-//	static int SwitchLst = -1;
-	static u32 Count = 0;
-	static u8 NowMotion = 0;
+	static long Count = 0;
+	static u8 NowMotion = 5;
 	static u16 SpeedSave = 0;
-	Speed++;
+//	OLED_CustormMotion(4);return;
 	if(SpeedSave!=Speed)
 	{
 		SpeedSave = Speed;Count = 0;
 	}
-	Count++;
-
-//	if(SwitchFlag)
-//	{
-//		OLED_AllMotion_Init();
-//		SwitchFlag = False;
-//	}
-	if((Type&0xf) == 0)
+	if((Type&0x3f) == 0)
+	{
+		Count = 0;
+		NowMotion=6;
 		return;
+	}
+	Count++;
 	
 	switch(Count/(5000-Speed*40))
 	{
 		case 0:
 		if(Type&8){
+
  CircleNum = 1;
  SnowflakeNum = 5;
- MeteoNum = 5;NowMotion=0; }else {Count=(5000-Speed*40);}   break;
+ MeteoNum = 5;
+ PlanetNum = 5;
+ TriangleNum = 2;
+
+NowMotion=0; }else {Count=(5000-Speed*40);}   break;
 		case 1:
 		if(Type&4){ 
+			
  MindNum = 5;
  CircleNum = 1;
- SnowflakeNum = 5;NowMotion=1;}else {Count=(5000-Speed*40)*2;}   break;
+ SnowflakeNum = 5;
+ PlanetNum = 5;
+ TriangleNum = 2;
+
+NowMotion=1;}else {Count=(5000-Speed*40)*2;}   break;
 		case 2:
 		if(Type&2){
+
  MindNum = 5;
  CircleNum = 1;
- MeteoNum = 5; NowMotion=2;}else {Count=(5000-Speed*40)*3;}   break;
+ MeteoNum = 5;
+ PlanetNum = 5;
+ TriangleNum = 2;
+
+NowMotion=2;}else {Count=(5000-Speed*40)*3;}   break;
 		case 3:
 		if(Type&1){
+			
  MindNum = 5;
+ SnowflakeNum = 5;
  MeteoNum = 5;
- SnowflakeNum = 5; NowMotion=3;}else {Count=0;}   break;
+ PlanetNum = 5;
+ TriangleNum = 2;
+
+NowMotion=3;}else {Count=(5000-Speed*40)*4;}   break;
+		case 4:
+		if(Type&0x20){
+			
+ MindNum = 5;
+ CircleNum = 1;
+ SnowflakeNum = 5;
+ MeteoNum = 5;
+ TriangleNum = 2;
+
+NowMotion=4;}else {Count=(5000-Speed*40)*5;}   break;
+		case 5:
+		if(Type&0x10){
+			
+ MindNum = 5;
+ CircleNum = 1;
+ SnowflakeNum = 5;
+ MeteoNum = 5;
+ PlanetNum = 5;
+
+NowMotion=5;}else {Count=0;}   break;
 		default:Count=0;break;
-	}OLED_CustormMotion(NowMotion);
+	}
+	OLED_CustormMotion(NowMotion);
 }
 
+
+#ifdef __cplusplus
+}
+#endif
 
 

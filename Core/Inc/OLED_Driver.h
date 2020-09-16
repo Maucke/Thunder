@@ -87,8 +87,10 @@ typedef signed   int   int32;                   /* defined for signed 32-bits in
 typedef float          fp32;                    /* single precision floating point variable (32bits) 单精度浮点数（32位长度） */
 typedef double         fp64;    
 
-#define OLED_WIDTH   159
-#define OLED_HEIGHT  127
+#define OLED_WIDTH   160
+#define OLED_HEIGHT  128
+
+
 void ResetLGDP4216(void);
 
 inline void SendCommand(u16 Cmd){(*(volatile u16*)0x60000000) = Cmd;}
@@ -101,6 +103,7 @@ inline u16 ReadData(void){return (*(volatile u16*)0x60020000);}
 void OLED_Fill(u16 x1,u16 y1,u16 x2,u16 y2,u16 Color);
 void InitLGDP4216(void);
 void Fill_Screen(u16 Color);
-void Draw_Point(u16 x,u16 y,u16 Color);
-u16 Read_Point(u16 x,u16 y);
+void Draw_Point(int x,int y,u16 Color);
+u16 Read_Point(int x,int y);
+void Refrash_Screen(void);
 #endif

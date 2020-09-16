@@ -107,13 +107,13 @@ int main(void)
 	GUI_Init();
 	GUI_SetBkColor(GUI_BLACK);
 
-	GUI_SetColor(GUI_RED);
+	GUI_SetColor(GUI_WHITE);
 	OLED_AllMotion_Init();
 	GUI_Clear();
 	GUI_SetFont(&GUI_Font24_ASCII);
 	GUI_DispStringHCenterAt("COLOR_Show", 70, 5);
-		HAL_Delay(100);
-	Device_Cmd.commandmotion = 0xF;
+		HAL_Delay(1000);
+	Device_Cmd.commandmotion = 0x1;
 	Device_Cmd.commandspeed = 500;
 	Device_Cmd.commandset = 0x8;
 	Device_Cmd.commandbrightness = 0xff;
@@ -126,8 +126,9 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		GUI_Clear();
+		Fill_Screen(0);
 		OLED_AllMotion(Device_Cmd.commandmotion,Device_Cmd.commandspeed);
+		Refrash_Screen();
 		HAL_Delay(10);
   }
   /* USER CODE END 3 */

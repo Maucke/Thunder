@@ -1,8 +1,9 @@
 #include "OLED_Driver.h"
-#include "ASCII_Font.h"
 #include "stm32f407xx.h"
 
 //u16 OLED_GRAM
+
+uint8_t OLED_GRAM[160*2][128];
 
 void ResetLGDP4216(void)
 {GPIOA->BSRR=2<<16;HAL_Delay(100);GPIOA->BSRR=2;HAL_Delay(100);}
@@ -332,63 +333,47 @@ void InitLGDP4216(void)
 }
 //--------------------------------------------------------------//
 
-void Draw_Point(u16 x,u16 y,u16 Color)
+void Draw_Point(int x,int y,u16 Color)
 {
-//	SendCommand(MXSTART);
-//	WriteData(x);
-//	SendCommand(MXEND);
-//	WriteData(x);
-//	SendCommand(MYSTART);
-//	WriteData(y);
-//	SendCommand(MYEND);
-//	WriteData(y);
-	if(x>OLED_WIDTH||y>OLED_HEIGHT)
-		return;
-	SendCommand(AD_X);
-	WriteData(x);
-	SendCommand(AD_Y);
-	WriteData(y);
-	SendCommand(DISP_DATA);
-	WriteData(Color);
+  // Bounds check.
+  if ((x >= 160*2) || (y >= 128)) return;
+  if ((x < 0) || (y < 0)) return;
+
+	OLED_GRAM[2*x][y] = (uint8_t)(Color >> 8);
+	OLED_GRAM[2*x+1][y] = (uint8_t)(Color & 0x00ff);
 }
 
-u16 Read_Point(u16 x,u16 y)
+u16 Read_Point(int x,int y)
 {
-//	SendCommand(MXSTART);
-//	WriteData(x);
-//	SendCommand(MXEND);
-//	WriteData(x);
-//	SendCommand(MYSTART);
-//	WriteData(y);
-//	SendCommand(MYEND);
-//	WriteData(y);
-	if(x>OLED_WIDTH||y>OLED_HEIGHT)
-		return 0;
+  if ((x >= 160*2) || (y >= 128)) return 0;
+  if ((x < 0) || (y < 0)) return 0;
+	return (OLED_GRAM[2*x][y]<<8)|OLED_GRAM[2*x+1][y];
+}
+
+void Refrash_Screen(void)
+{
+  int i,j;
 	SendCommand(AD_X);
-	WriteData(x);
+	WriteData(0);
 	SendCommand(AD_Y);
-	WriteData(y);
+	WriteData(0);
 	SendCommand(DISP_DATA);
-	return ReadData();
+  for(i=0;i<128;i++)  {
+    for(j=0;j<160;j++)  {
+      WriteData((OLED_GRAM[j*2][i]<<8)|OLED_GRAM[j*2+1][i]);//RAM data
+    }
+  }
 }
 
 void Fill_Screen(u16 Color)
 {
-//	SendCommand(MXSTART);
-//	WriteData(0);
-//	SendCommand(MXEND);
-//	WriteData(159);
-//	SendCommand(MYSTART);
-//	WriteData(0);
-//	SendCommand(MYEND);
-//	WriteData(127);
-	SendCommand(AD_X);
-	WriteData(0);
-	SendCommand(AD_Y);
-	WriteData(0);
-	SendCommand(DISP_DATA);
-	for(u16 i=0;i<0x5000;i++)
-		WriteData(Color);
+  int i,j;
+  for(i=0;i<160;i++)  {
+    for(j=0;j<128;j++)  {
+      OLED_GRAM[2*i][j] = (uint8_t)(Color >> 8);
+      OLED_GRAM[2*i+1][j] = (uint8_t)(Color & 0xff);
+    }
+  }
 }
 
 u16 absl(int Value)
